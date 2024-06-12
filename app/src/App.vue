@@ -1,30 +1,111 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div id="app">
+    <div v-if="isLoading">Loading...</div>
+    <input type="file" @change="uploadFile" />
+    <div>
+      <label>Filter flipper length (min):</label>
+      <input type="range" v-model="flipperLengthMin" min="0" max="250" />
+      <span>{{ flipperLengthMin }}</span>
+    </div>
+    <div>
+      <label>Choose Plot Type:</label>
+      <select v-model="selectedPlot">
+        <option value="scatter">Scatter Plot</option>
+        <option value="histogram">Histogram</option>
+      </select>
+    </div>
+    <div id="plotly-container">
+      <plotly :data="plotData" :layout="layout"></plotly>
+    </div>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<script>
+import { ref, watch, onMounted } from "vue";
+import axios from "axios";
+import { VuePlotly as Plotly } from "@clalarco/vue3-plotly";
+
+function debounce(fn, delay) {
+  let timeoutID;
+  return function (...args) {
+    clearTimeout(timeoutID);
+    timeoutID = setTimeout(() => {
+      fn.apply(this, args);
+    }, delay);
+  };
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+export default {
+  name: "App",
+  components: {
+    Plotly,
+  },
+  setup() {
+    const flipperLengthMin = ref(100);
+    const selectedPlot = ref("scatter");
+    const plotData = ref([]);
+    const layout = ref({});
+    const isLoading = ref(false);
+
+    const uploadFile = (event) => {
+      const file = event.target.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+      axios
+        .post("http://localhost:8000/upload-csv/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        })
+        .then(() => {
+          fetchPlot();
+        });
+    };
+
+    const fetchPlot = async () => {
+      const url =
+        selectedPlot.value === "scatter"
+          ? `http://localhost:8000/scatter-plot?x=bill_length_mm&y=bill_depth_mm&color=species&flipper_length_min=${flipperLengthMin.value}`
+          : `http://localhost:8000/histogram?column=bill_length_mm&color=species&flipper_length_min=${flipperLengthMin.value}`;
+
+      try {
+        isLoading.value = true;
+        const json = await axios.get(url);
+        const { data, layout } = JSON.parse(json.data) ?? {};
+        isLoading.value = false;
+        plotData.value = data;
+        layout.value = layout;
+      } catch (err) {
+        isLoading.value = false;
+        console.error(err, "error");
+      }
+    };
+
+    const debouncedFetchPlot = debounce(fetchPlot, 300);
+
+    watch([flipperLengthMin, selectedPlot], debouncedFetchPlot);
+
+    onMounted(fetchPlot);
+
+    return {
+      flipperLengthMin,
+      selectedPlot,
+      plotData,
+      layout,
+      uploadFile,
+      isLoading,
+    };
+  },
+};
+</script>
+
+<style>
+#app {
+  text-align: center;
+  margin-top: 50px;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+#plotly-container {
+  width: calc(80vw);
+  height: 500px;
 }
 </style>
