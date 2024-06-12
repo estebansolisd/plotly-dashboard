@@ -25,3 +25,11 @@ npm >= 10.5.0
 ### Installation 
 `npm i` install dependencies
 `npm run dev` to run the project
+
+
+### DEMO
+
+
+https://github.com/estebansolisd/plotly-dashboard/assets/38143743/31a4a957-23a4-493d-b80e-1c26abe7ecf1
+
+
