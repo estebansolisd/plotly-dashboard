@@ -1,7 +1,10 @@
 <template>
   <div id="app">
     <div v-if="isLoading">Loading...</div>
-    <input type="file" @change="uploadFile" />
+    <div>
+      <label for="file">Upload your custom CSV..</label>
+      <input id="file" type="file" @change="uploadFile" />
+    </div>
     <div>
       <label>Filter flipper length (min):</label>
       <input type="range" v-model="flipperLengthMin" min="0" max="250" />
@@ -52,7 +55,7 @@ export default {
       const formData = new FormData();
       formData.append("file", file);
       axios
-        .post("http://localhost:8000/upload-csv/", formData, {
+        .post("http://localhost:8000/upload/", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
